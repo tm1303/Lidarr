@@ -138,6 +138,28 @@ namespace NzbDrone.Core.Test.MusicTests
         }
 
         [Test]
+        public void apply_changes_should_copy_filter_and_blocklist_flag()
+        {
+            var other = new Album
+            {
+                PreferredTrackCounts = new List<int> { 11 },
+                PreferredMediumCounts = new List<int> { 1 },
+                AutoBlocklistUnwantedRelease = true
+            };
+
+            _album.ApplyChanges(other);
+
+            _album.PreferredTrackCounts.Should().Equal(11);
+            _album.PreferredMediumCounts.Should().Equal(1);
+            _album.AutoBlocklistUnwantedRelease.Should().BeTrue();
+
+            _album.ApplyChanges(new Album { PreferredTrackCounts = null, PreferredMediumCounts = null });
+
+            _album.PreferredTrackCounts.Should().BeEmpty();
+            _album.PreferredMediumCounts.Should().BeEmpty();
+        }
+
+        [Test]
         public void should_not_fail_for_null_album()
         {
             Album album = null;

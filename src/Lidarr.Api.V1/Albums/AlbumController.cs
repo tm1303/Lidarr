@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using FluentValidation;
 using Lidarr.Http;
-using Lidarr.Http.REST;
 using Lidarr.Http.REST.Attributes;
 using Microsoft.AspNetCore.Mvc;
 using NzbDrone.Common.Extensions;
@@ -159,7 +158,7 @@ namespace Lidarr.Api.V1.Albums
 
             var model = albumResource.ToModel(album);
 
-            ApplyReleaseFilter(model, previouslyMonitoredId);
+            _releaseService.ApplyReleaseFilter(model, previouslyMonitoredId);
 
             _albumService.UpdateAlbum(model);
             _releaseService.UpdateMany(model.AlbumReleases.Value);
@@ -167,34 +166,6 @@ namespace Lidarr.Api.V1.Albums
             BroadcastResourceChange(ModelAction.Updated, model.Id);
 
             return Accepted(model.Id);
-        }
-
-        // Keep the monitored release consistent with the album's track/media count filter.
-        // An explicit release choice by the user (monitored release changed in this request) always wins.
-        private static void ApplyReleaseFilter(Album album, int? previouslyMonitoredId)
-        {
-            var releases = album.AlbumReleases.Value;
-
-            if (!releases.Any())
-            {
-                return;
-            }
-
-            if (album.HasReleaseFilter() && !releases.Any(album.IsAllowedRelease))
-            {
-                throw new BadRequestException("No release of this album matches the selected track count and media count");
-            }
-
-            var monitored = releases.SingleOrDefault(x => x.Monitored);
-            var userPickedRelease = monitored != null && monitored.Id != previouslyMonitoredId;
-
-            if (userPickedRelease || album.IsAllowedRelease(monitored))
-            {
-                return;
-            }
-
-            var toMonitor = album.ChooseMonitoredRelease(releases);
-            releases.ForEach(x => x.Monitored = x.Id == toMonitor.Id);
         }
 
         [RestDeleteById]
